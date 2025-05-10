@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
+from flask import Flask
 
 # ✅ Ajout de l'intention message_content
 intents = discord.Intents.default()
@@ -10,6 +11,19 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# Crée une instance Flask pour l'hébergement sur Render si nécessaire
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return "Bot is running"
+
+# Écoute sur un port dynamique pour Render
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 5000))  # Utilisation du port défini sur Render
+    app.run(host='0.0.0.0', port=port)
+
 TOKEN = os.environ['NKSV2']  # Assure-toi que cette variable est bien définie sur Render
 
 # Chargement des stats
@@ -101,7 +115,6 @@ async def setstats(
         if not interaction.response.is_done():
             await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
         else:
-            # Utilisation de followup si la réponse initiale a déjà été envoyée
             await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
 
 # 👫 /equipe command (admin only)
