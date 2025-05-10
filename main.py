@@ -56,11 +56,12 @@ async def stats_command(interaction: discord.Interaction, membre: discord.Member
         await interaction.response.send_message(embed=embed)
 
     except Exception as e:
+        print(f"Erreur dans la commande stats : {e}")
         if not interaction.response.is_done():
             await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
         else:
+            # Utilisation de followup si la réponse initiale a déjà été envoyée
             await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
-        print(f"Erreur dans la commande stats : {e}")
 
 # ⚙️ /setstats command (admin only)
 @bot.tree.command(name="setstats", description="Modifier les stats d’un chauffeur (Admin only).")
@@ -96,11 +97,12 @@ async def setstats(
         await interaction.response.send_message(f"✅ Statistiques de {membre.display_name} mises à jour.")
 
     except Exception as e:
+        print(f"Erreur dans la commande setstats : {e}")
         if not interaction.response.is_done():
             await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
         else:
+            # Utilisation de followup si la réponse initiale a déjà été envoyée
             await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
-        print(f"Erreur dans la commande setstats : {e}")
 
 # 👫 /equipe command (admin only)
 @bot.tree.command(name="equipe", description="Affiche les équipes du Challenge Duo (admin only).")
@@ -136,11 +138,11 @@ Voici les équipes tirées au sort pour ce challenge :
         )
         await interaction.response.send_message(embed=embed)
     except Exception as e:
+        print(f"Erreur dans la commande equipe : {e}")
         if not interaction.response.is_done():
             await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
         else:
             await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
-        print(f"Erreur dans la commande equipe : {e}")
 
 # Gérer erreur si non-admin
 @equipe.error
