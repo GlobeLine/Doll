@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: mon-bot-discord
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
