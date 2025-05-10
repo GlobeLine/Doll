@@ -39,20 +39,28 @@ async def stats_command(interaction: discord.Interaction, membre: discord.Member
     membre = membre or interaction.user
     user_id = str(membre.id)
 
-    if user_id not in stats:
-        await interaction.response.send_message(f"❌ je suis dsl mais {membre.display_name} sert a rien 😢.", ephemeral=True)
-        return
+    try:
+        if user_id not in stats:
+            await interaction.response.send_message(f"❌ je suis dsl mais {membre.display_name} sert à rien 😢.", ephemeral=True)
+            return
 
-    data = stats[user_id]
-    embed = discord.Embed(title=f"🪪 carte conducteur de {membre.display_name}", color=0xF1E0C6)
-    embed.set_thumbnail(url=membre.avatar.url)
-    embed.add_field(name="🏆 Victoires Solo", value=data.get("solo", 0), inline=False)
-    embed.add_field(name="🤝 Victoires Duo", value=data.get("duo", 0), inline=False)
-    embed.add_field(name="🛣️ Kilomètres Parcourus (réél)", value=f"{data.get('km', 0)} km", inline=False)
-    embed.add_field(name="🚛 Véhicule Préféré", value=data.get("vehicle_preference", "Aucun"), inline=False)
+        data = stats[user_id]
+        embed = discord.Embed(title=f"🪪 carte conducteur de {membre.display_name}", color=0xF1E0C6)
+        embed.set_thumbnail(url=membre.avatar.url)
+        embed.add_field(name="🏆 Victoires Solo", value=data.get("solo", 0), inline=False)
+        embed.add_field(name="🤝 Victoires Duo", value=data.get("duo", 0), inline=False)
+        embed.add_field(name="🛣️ Kilomètres Parcourus (réél)", value=f"{data.get('km', 0)} km", inline=False)
+        embed.add_field(name="🚛 Véhicule Préféré", value=data.get("vehicle_preference", "Aucun"), inline=False)
+        embed.set_footer(text="Dollyprane Transport")
 
-    embed.set_footer(text="Dollyprane Transport")
-    await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed)
+
+    except Exception as e:
+        if not interaction.response.is_done():
+            await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        print(f"Erreur dans la commande stats : {e}")
 
 # ⚙️ /setstats command (admin only)
 @bot.tree.command(name="setstats", description="Modifier les stats d’un chauffeur (Admin only).")
@@ -75,26 +83,34 @@ async def setstats(
         await interaction.response.send_message("❌ ohhhh, touche pas à ça attention hein.😫", ephemeral=True)
         return
 
-    user_id = str(membre.id)
-    stats[user_id] = {
-        "solo": solo,
-        "duo": duo,
-        "km": km,
-        "vehicle_preference": vehicle_preference
-    }
-    save_stats(stats)
+    try:
+        user_id = str(membre.id)
+        stats[user_id] = {
+            "solo": solo,
+            "duo": duo,
+            "km": km,
+            "vehicle_preference": vehicle_preference
+        }
+        save_stats(stats)
 
-    await interaction.response.send_message(f"✅ Statistiques de {membre.display_name} mises à jour.")
+        await interaction.response.send_message(f"✅ Statistiques de {membre.display_name} mises à jour.")
+
+    except Exception as e:
+        if not interaction.response.is_done():
+            await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        print(f"Erreur dans la commande setstats : {e}")
 
 # 👫 /equipe command (admin only)
 @bot.tree.command(name="equipe", description="Affiche les équipes du Challenge Duo (admin only).")
 @app_commands.checks.has_permissions(administrator=True)
 async def equipe(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="📢 Équipes aléatoires du Challenge Duo 🛣️",
-        color=0xF1E0C6,
-        description="""
-🎲 Le tirage au sort est terminé !
+    try:
+        embed = discord.Embed(
+            title="📢 Équipes aléatoires du Challenge Duo 🛣️",
+            color=0xF1E0C6,
+            description="""🎲 Le tirage au sort est terminé !
 Voici les équipes tirées au sort pour ce challenge :
 
 ━━━━━━━━━━━━━━━━━━
@@ -117,8 +133,14 @@ Voici les équipes tirées au sort pour ce challenge :
 📅 Bonne chance à toutes les équipes pour les 2 prochaines semaines !
 🚛 Que la meilleure équipe gagne !
 """
-    )
-    await interaction.response.send_message(embed=embed)
+        )
+        await interaction.response.send_message(embed=embed)
+    except Exception as e:
+        if not interaction.response.is_done():
+            await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        else:
+            await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        print(f"Erreur dans la commande equipe : {e}")
 
 # Gérer erreur si non-admin
 @equipe.error
