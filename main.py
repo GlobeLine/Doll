@@ -4,6 +4,8 @@ from discord import app_commands
 import json
 import os
 from flask import Flask
+import threading
+import asyncio
 
 # ✅ Ajout de l'intention message_content
 intents = discord.Intents.default()
@@ -19,12 +21,15 @@ app = Flask(__name__)
 def index():
     return "Bot is running"
 
-# Écoute sur un port dynamique pour Render
-if __name__ == "__main__":
+# Fonction pour démarrer Flask
+def run_flask():
     port = int(os.environ.get('PORT', 5000))  # Utilisation du port défini sur Render
     app.run(host='0.0.0.0', port=port)
 
-TOKEN = os.environ['NKSV2']  # Assure-toi que cette variable est bien définie sur Render
+# Fonction pour démarrer le bot Discord
+async def start_bot():
+    TOKEN = os.environ['NKSV2']  # Assure-toi que cette variable est bien définie sur Render
+    await bot.start(TOKEN)
 
 # Chargement des stats
 def load_stats():
@@ -74,7 +79,6 @@ async def stats_command(interaction: discord.Interaction, membre: discord.Member
         if not interaction.response.is_done():
             await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
         else:
-            # Utilisation de followup si la réponse initiale a déjà été envoyée
             await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
 
 # ⚙️ /setstats command (admin only)
@@ -163,4 +167,9 @@ async def equipe_error(interaction: discord.Interaction, error):
     if isinstance(error, app_commands.errors.MissingPermissions):
         await interaction.response.send_message("❌ ohhhh, touche pas à ça attention hein.😫", ephemeral=True)
 
-bot.run(TOKEN)
+# Démarre Flask dans un thread séparé pour ne pas bloquer l'exécution du bot
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.start()
+
+# Démarre le bot
+asyncio.run(start_bot())
