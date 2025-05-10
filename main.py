@@ -4,11 +4,13 @@ from discord import app_commands
 import json
 import os
 
+# ✅ Ajout de l'intention message_content
 intents = discord.Intents.default()
+intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-TOKEN = os.environ['NKSV2']  # Assure-toi que cette variable est bien définie sur Replit
+TOKEN = os.environ['NKSV2']  # Assure-toi que cette variable est bien définie sur Render
 
 # Chargement des stats
 def load_stats():
