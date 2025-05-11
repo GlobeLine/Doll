@@ -1,50 +1,59 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import json
 import os
 from flask import Flask
 import threading
 import asyncio
+from tinydb import TinyDB, Query
 
-# ✅ Ajout de l'intention message_content
+# Initialisation DB
+db = TinyDB("stats.json")
+Stats = Query()
+
+# Fonctions de stats (remplacent l'ancien système fichier)
+def get_stats(user_id):
+    result = db.get(Stats.user_id == user_id)
+    return result if result else {"solo": 0, "duo": 0, "km": 0, "vehicle_preference": "Aucun"}
+
+def set_stats(user_id, solo, duo, km, vehicle_preference):
+    if db.contains(Stats.user_id == user_id):
+        db.update({
+            "solo": solo,
+            "duo": duo,
+            "km": km,
+            "vehicle_preference": vehicle_preference
+        }, Stats.user_id == user_id)
+    else:
+        db.insert({
+            "user_id": user_id,
+            "solo": solo,
+            "duo": duo,
+            "km": km,
+            "vehicle_preference": vehicle_preference
+        })
+
+# Intents Discord
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Crée une instance Flask pour l'hébergement sur Render si nécessaire
+# Flask pour Render
 app = Flask(__name__)
 
 @app.route('/')
 def index():
     return "Bot is running"
 
-# Fonction pour démarrer Flask
 def run_flask():
-    port = int(os.environ.get('PORT', 5000))  # Utilisation du port défini sur Render
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
 
-# Fonction pour démarrer le bot Discord
 async def start_bot():
-    TOKEN = os.environ['NKSV2']  # Assure-toi que cette variable est bien définie sur Render
+    TOKEN = os.environ['NKSV2']
     await bot.start(TOKEN)
-
-# Chargement des stats
-def load_stats():
-    try:
-        with open("stats.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-# Sauvegarde des stats
-def save_stats(data):
-    with open("stats.json", "w") as f:
-        json.dump(data, f, indent=4)
-
-stats = load_stats()
 
 @bot.event
 async def on_ready():
@@ -59,11 +68,11 @@ async def stats_command(interaction: discord.Interaction, membre: discord.Member
     user_id = str(membre.id)
 
     try:
-        if user_id not in stats:
+        data = get_stats(user_id)
+        if not data or all(val == 0 or val == "Aucun" for val in data.values()):
             await interaction.response.send_message(f"❌ je suis dsl mais {membre.display_name} sert à rien 😢.", ephemeral=True)
             return
 
-        data = stats[user_id]
         embed = discord.Embed(title=f"🪪 carte conducteur de {membre.display_name}", color=0xF1E0C6)
         embed.set_thumbnail(url=membre.avatar.url)
         embed.add_field(name="🏆 Victoires Solo", value=data.get("solo", 0), inline=False)
@@ -76,12 +85,9 @@ async def stats_command(interaction: discord.Interaction, membre: discord.Member
 
     except Exception as e:
         print(f"Erreur dans la commande stats : {e}")
-        if not interaction.response.is_done():
-            await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
-        else:
-            await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
-# ⚙️ /setstats command (admin only)
+# ⚙️ /setstats command
 @bot.tree.command(name="setstats", description="Modifier les stats d’un chauffeur (Admin only).")
 @app_commands.describe(
     membre="Le membre à modifier",
@@ -90,7 +96,7 @@ async def stats_command(interaction: discord.Interaction, membre: discord.Member
     km="Kilomètres parcourus",
     vehicle_preference="Véhicule préféré"
 )
-async def setstats(
+async def setstats_command(
     interaction: discord.Interaction,
     membre: discord.Member,
     solo: int,
@@ -104,24 +110,13 @@ async def setstats(
 
     try:
         user_id = str(membre.id)
-        stats[user_id] = {
-            "solo": solo,
-            "duo": duo,
-            "km": km,
-            "vehicle_preference": vehicle_preference
-        }
-        save_stats(stats)
-
+        set_stats(user_id, solo, duo, km, vehicle_preference)
         await interaction.response.send_message(f"✅ Statistiques de {membre.display_name} mises à jour.")
-
     except Exception as e:
         print(f"Erreur dans la commande setstats : {e}")
-        if not interaction.response.is_done():
-            await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
-        else:
-            await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
-# 👫 /equipe command (admin only)
+# 👫 /equipe command
 @bot.tree.command(name="equipe", description="Affiche les équipes du Challenge Duo (admin only).")
 @app_commands.checks.has_permissions(administrator=True)
 async def equipe(interaction: discord.Interaction):
@@ -130,33 +125,22 @@ async def equipe(interaction: discord.Interaction):
             title="📢 Équipes aléatoires du Challenge Duo 🛣️",
             color=0xF1E0C6,
             description="""🎲 Le tirage au sort est terminé !
-Voici les équipes tirées au sort pour ce challenge :
 
 ━━━━━━━━━━━━━━━━━━
-
 👥 Équipe 1 :
 🧑‍🤝‍🧑 Blue_Labelrun & AyZou 
-
 ━━━━━━━━━━━━━━━━━━ 
-
 👥 Équipe 2 :
 🧑‍🤝‍🧑 Antoine & galaxiew
-
 ━━━━━━━━━━━━━━━━━━
-
 👥 Équipe 3 :
 🧑‍🤝‍🧑 Roni & Allan
-
 ━━━━━━━━━━━━━━━━━━
-
 👥 Équipe 4 :
 🧑‍🤝‍🧑 inconnukoro & chaokopops
-
 ━━━━━━━━━━━━━━━━━━
-
 👥 Équipe 5 :
 🧑‍🤝‍🧑 SKOLY & Xenox
-
 ━━━━━━━━━━━━━━━━━━
 
 📅 Bonne chance à toutes les équipes pour les 2 prochaines semaines !
@@ -166,20 +150,16 @@ Voici les équipes tirées au sort pour ce challenge :
         await interaction.response.send_message(embed=embed)
     except Exception as e:
         print(f"Erreur dans la commande equipe : {e}")
-        if not interaction.response.is_done():
-            await interaction.response.send_message("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
-        else:
-            await interaction.followup.send("❌ Une erreur est survenue en traitant la commande.", ephemeral=True)
+        await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
 
-# Gérer erreur si non-admin
 @equipe.error
 async def equipe_error(interaction: discord.Interaction, error):
     if isinstance(error, app_commands.errors.MissingPermissions):
         await interaction.response.send_message("❌ ohhhh, touche pas à ça attention hein.😫", ephemeral=True)
 
-# Démarre Flask dans un thread séparé pour ne pas bloquer l'exécution du bot
+# Flask sur thread à part
 flask_thread = threading.Thread(target=run_flask)
 flask_thread.start()
 
-# Démarre le bot
+# Lancement bot
 asyncio.run(start_bot())
