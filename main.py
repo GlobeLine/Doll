@@ -154,6 +154,11 @@ Voici les équipes tirées au sort pour ce challenge :
 
 ━━━━━━━━━━━━━━━━━━
 
+👥 Équipe 4 :
+🧑‍🤝‍🧑 SKOLY & Xenox
+
+━━━━━━━━━━━━━━━━━━
+
 📅 Bonne chance à toutes les équipes pour les 2 prochaines semaines !
 🚛 Que la meilleure équipe gagne !
 """
